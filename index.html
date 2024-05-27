@@ -30,41 +30,34 @@
 <body>
     <div class="container mt-5">
         <div class="row">
-            {% for name in names %}
-            <div class="col-md-12 mb-4"> <!-- Full width for each card -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <button class="btn btn-link" id="collapseBtn{{ loop.index }}" aria-expanded="false">
-                                {{ name }}
-                            </button>
-                        </h5>
-                    </div>
-                    <div id="collapse{{ loop.index }}" class="collapse collapsed">
-                        <div class="card-body">
-                            <table id="datatable-{{ loop.index }}" class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        {% for column in dataframes[loop.index0].columns %}
-                                        <th>{{ column }}</th>
-                                        {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in dataframes[loop.index0].values %}
-                                    <tr>
-                                        {% for value in row %}
-                                        <td>{{ value }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <div class="col">
+                <table id="example" class="table custom-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Country</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>John</td>
+                            <td>30</td>
+                            <td>USA</td>
+                        </tr>
+                        <tr>
+                            <td>Jane</td>
+                            <td>25</td>
+                            <td>Canada</td>
+                        </tr>
+                        <tr>
+                            <td>Michael</td>
+                            <td>35</td>
+                            <td>UK</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
         </div>
     </div>
 
