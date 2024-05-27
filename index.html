@@ -9,6 +9,23 @@
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" rel="stylesheet">
      <style>
+         .card .dt-button {
+            background-color: #007bff !important; /* blue */
+            color: #fff !important; /* white */
+            border-color: #007bff !important; /* blue */
+        }
+
+        /* Custom button hover color */
+        .card .dt-button:hover {
+            background-color: #0056b3 !important; /* darker blue on hover */
+            color: #fff !important; /* white */
+            border-color: #0056b3 !important; /* darker blue on hover */
+        }
+
+        /* Custom text color */
+        .card .dataTables_empty {
+            color: #ff0000 !important; /* red */
+        }
         /* Custom table header color */
         .card .table th {
             background-color: #007bff; /* blue */
