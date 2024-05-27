@@ -8,6 +8,24 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" rel="stylesheet">
+     <style>
+        /* Custom table header color */
+        .custom-table th {
+            background-color: #007bff; /* blue */
+            color: #fff; /* white */
+        }
+
+        /* Custom stripe effect color */
+        .custom-table.dataTable.stripe tbody tr.odd, .custom-table.dataTable.display tbody tr.odd {
+            background-color: #f8f9fa; /* light gray */
+        }
+
+        /* Custom cell color */
+        .custom-table td {
+            background-color: #e9ecef; /* gray */
+            color: #000; /* black */
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
