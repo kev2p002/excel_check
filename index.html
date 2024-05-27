@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expandable Cards with DataTables</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            {% for name in names %}
+            <div class="col-md-12 mb-4"> <!-- Full width for each card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <button class="btn btn-link" id="collapseBtn{{ loop.index }}" aria-expanded="false">
+                                {{ name }}
+                            </button>
+                        </h5>
+                    </div>
+                    <div id="collapse{{ loop.index }}" class="collapse collapsed">
+                        <div class="card-body">
+                            <table id="datatable-{{ loop.index }}" class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        {% for column in dataframes[loop.index0].columns %}
+                                        <th>{{ column }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in dataframes[loop.index0].values %}
+                                    <tr>
+                                        {% for value in row %}
+                                        <td>{{ value }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+
+
+    <script>
+        // $('.collapse').collapse();
+        var list_length ="{{ length }}"
+        $(document).ready(function() {
+            $('[id^="collapseBtn"]').click(function() {
+                var targetId = $(this).attr('id').replace('collapseBtn', 'collapse');
+                $('#' + targetId).collapse('toggle');
+            });
+
+            for(var i=0;i<list_length;i++){
+                id='#datatable-'.concat((i+1).toString())
+                $(id).DataTable();
+            }
+        });
+    </script>
+</body>
+</html>
