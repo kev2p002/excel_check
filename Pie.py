@@ -30,7 +30,7 @@ if __name__ == '__main__':
     <div class="container mt-5">
         <h1 class="text-center">Pie Charts</h1>
         <div class="row">
-            {% for i, data in enumerate(data_sets) %}
+            {% for i in range(data_sets|length) %}
             <div class="col-md-6 mb-4">
                 <canvas id="myPieChart{{ i }}"></canvas>
             </div>
@@ -57,12 +57,14 @@ if __name__ == '__main__':
                     },
                     options: {
                         responsive: true,
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: `Pie Chart ${index + 1}`
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: `Pie Chart ${index + 1}`
+                            }
                         }
                     }
                 });
