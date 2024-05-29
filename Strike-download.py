@@ -1,3 +1,60 @@
+from flask import Flask, render_template, request, send_file, jsonify
+import pandas as pd
+import io
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    data = {
+        "hello": {
+            "High": ["Item1", "Item2"],
+            "Low": ["Item3", "Item4", "Item5"],
+            "Normal": ["Item6", "Item7", "Item8"]
+        },
+        "man": {
+            "High": ["Item1", "Item2"],
+            "Low": ["Item3"],
+            "Normal": ["Item4", "Item5"]
+        }
+    }
+    
+    dataframes = {}
+    pie_data = {}
+
+    for key, value in data.items():
+        rows = []
+        for impact, items in value.items():
+            for item in items:
+                rows.append({"Impact": impact, "Item": item, "ColorClass": impact.lower()})
+        df = pd.DataFrame(rows)
+        dataframes[key] = df
+        pie_data[key] = {
+            "High": len(value["High"]),
+            "Low": len(value["Low"]),
+            "Normal": len(value["Normal"])
+        }
+
+    return render_template('index.html', dataframes=dataframes, pie_data=pie_data)
+
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
+    data = request.get_json()
+    key = data['key']
+    rows = data['rows']
+    df = pd.DataFrame(rows)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=key)
+    output.seek(0)
+
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'{key}.xlsx')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,6 +143,7 @@
 
     <script>
         $(document).ready(function() {
+            var dataTables = {};
             {% for key, counts in pie_data.items() %}
             var ctx = document.getElementById('pieChart{{ loop.index }}').getContext('2d');
             var pieChart = new Chart(ctx, {
@@ -109,6 +167,7 @@
                     adjustChartContainerHeight('{{ loop.index }}');
                 }
             });
+            dataTables['dataTable{{ loop.index }}'] = dataTable;
 
             // Adjust chart container height based on DataTable
             function adjustChartContainerHeight(index) {
@@ -134,9 +193,11 @@
             $(document).on('click', '.download-btn', function() {
                 var key = $(this).data('key');
                 var index = $(this).data('index');
+                var dataTable = dataTables['dataTable' + index];
+
                 var rows = [];
-                $('#dataTable' + index + ' tbody tr').each(function() {
-                    var row = $(this);
+                dataTable.rows().every(function() {
+                    var row = $(this.node());
                     var impact = row.find('td').eq(0).text();
                     var item = row.find('td').eq(1).text();
                     var interaction = row.find('select').val();
@@ -150,7 +211,14 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ key: key, rows: rows }),
                     success: function(response) {
-                        window.location.href = response.url;
+                        const url = window.URL.createObjectURL(new Blob([response]));
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `${key}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
                     }
                 });
             });
@@ -158,62 +226,3 @@
     </script>
 </body>
 </html>
-
-from flask import Flask, render_template, request, send_file, jsonify
-import pandas as pd
-import io
-
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    data = {
-        "hello": {
-            "High": ["Item1", "Item2"],
-            "Low": ["Item3", "Item4", "Item5"],
-            "Normal": ["Item6", "Item7", "Item8"]
-        },
-        "man": {
-            "High": ["Item1", "Item2"],
-            "Low": ["Item3"],
-            "Normal": ["Item4", "Item5"]
-        }
-    }
-    
-    dataframes = {}
-    pie_data = {}
-
-    for key, value in data.items():
-        rows = []
-        for impact, items in value.items():
-            for item in items:
-                rows.append({"Impact": impact, "Item": item, "ColorClass": impact.lower()})
-        df = pd.DataFrame(rows)
-        dataframes[key] = df
-        pie_data[key] = {
-            "High": len(value["High"]),
-            "Low": len(value["Low"]),
-            "Normal": len(value["Normal"])
-        }
-
-    return render_template('index.html', dataframes=dataframes, pie_data=pie_data)
-
-@app.route('/download_excel', methods=['POST'])
-def download_excel():
-    data = request.get_json()
-    key = data['key']
-    rows = data['rows']
-    df = pd.DataFrame(rows)
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name=key)
-        writer.save()
-
-    output.seek(0)
-
-    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'{key}.xlsx')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
