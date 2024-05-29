@@ -39,13 +39,13 @@ def index():
 
 @app.route('/download_excel', methods=['POST'])
 def download_excel():
-    data = request.get_json()
+    data = request.json
     key = data['key']
     rows = data['rows']
     df = pd.DataFrame(rows)
 
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name=key)
     output.seek(0)
 
@@ -53,8 +53,6 @@ def download_excel():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -210,15 +208,21 @@ if __name__ == '__main__':
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ key: key, rows: rows }),
-                    success: function(response) {
-                        const url = window.URL.createObjectURL(new Blob([response]));
-                        const a = document.createElement('a');
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob) {
+                        var url = window.URL.createObjectURL(blob);
+                        var a = document.createElement('a');
                         a.style.display = 'none';
                         a.href = url;
-                        a.download = `${key}.xlsx`;
+                        a.download = key + '.xlsx';
                         document.body.appendChild(a);
                         a.click();
                         window.URL.revokeObjectURL(url);
+                    },
+                    error: function() {
+                        alert('Error downloading file.');
                     }
                 });
             });
@@ -226,3 +230,5 @@ if __name__ == '__main__':
     </script>
 </body>
 </html>
+
+
