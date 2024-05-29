@@ -100,7 +100,7 @@ if __name__ == '__main__':
                                         <td>{{ row.Impact }}</td>
                                         <td>{{ row.Item }}</td>
                                         <td>
-                                            <select class="form-select interaction-dropdown" data-row="{{ loop.index }}">
+                                            <select class="form-select interaction-dropdown" data-row="{{ loop.index }}" data-item="{{ row.Item }}" data-impact="{{ row.Impact }}">
                                                 <option value="Select">Select</option>
                                                 <option value="Major">Major</option>
                                                 <option value="Minor">Minor</option>
@@ -126,6 +126,8 @@ if __name__ == '__main__':
 
     <script>
         $(document).ready(function() {
+            var pieCharts = [];
+
             {% for key, counts in pie_data.items() %}
             var ctx = document.getElementById('pieChart{{ loop.index }}').getContext('2d');
             var pieChart = new Chart(ctx, {
@@ -142,6 +144,7 @@ if __name__ == '__main__':
                     maintainAspectRatio: false
                 }
             });
+            pieCharts.push(pieChart);
 
             var dataTable = $('#dataTable{{ loop.index }}').DataTable({
                 "pageLength": 5,
@@ -150,7 +153,6 @@ if __name__ == '__main__':
                 }
             });
 
-            // Adjust chart container height based on DataTable
             function adjustChartContainerHeight(index) {
                 var tableHeight = $('#dataTable' + index + '_wrapper .dataTables_scrollBody').height();
                 $('#collapse' + index + ' .chart-container').css('height', tableHeight);
@@ -163,11 +165,23 @@ if __name__ == '__main__':
             // Add event listener for interaction dropdown
             $(document).on('change', '.interaction-dropdown', function() {
                 var row = $(this).closest('tr');
+                var impact = $(this).data('impact');
+                var rowIdx = $(this).data('row') - 1; // zero-based index for pieCharts array
+                var pieChart = pieCharts[rowIdx];
+                var dataset = pieChart.data.datasets[0];
+                var index = pieChart.data.labels.indexOf(impact);
+
                 if ($(this).val() === 'No Interaction') {
                     row.addClass('strikeout');
+                    dataset.data[index]--;
                 } else {
-                    row.removeClass('strikeout');
+                    if (row.hasClass('strikeout')) {
+                        row.removeClass('strikeout');
+                        dataset.data[index]++;
+                    }
                 }
+
+                pieChart.update();
             });
         });
     </script>
