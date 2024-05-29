@@ -128,26 +128,26 @@
             $(document).on('change', '.interaction-dropdown', function() {
                 var row = $(this).closest('tr');
                 var impact = $(this).data('impact');
-                var rowIdx = $(this).data('row') - 1; // zero-based index for pieCharts array
-                var pieChart = pieCharts[rowIdx];
+                var rowIdx = $(this).data('row'); // zero-based index for pieCharts array
+                var pieChart = pieCharts[rowIdx - 1];
                 var dataset = pieChart.data.datasets[0];
                 var index = pieChart.data.labels.indexOf(impact);
 
                 if ($(this).val() === 'No Interaction') {
                     row.addClass('strikeout');
-                    rowImpactCounts[rowIdx + 1][impact]--;
+                    rowImpactCounts[rowIdx][impact]--;
                 } else {
                     if (row.hasClass('strikeout')) {
                         row.removeClass('strikeout');
-                        rowImpactCounts[rowIdx + 1][impact]++;
+                        rowImpactCounts[rowIdx][impact]++;
                     }
                 }
 
                 // Update the pie chart data
                 pieChart.data.datasets[0].data = [
-                    rowImpactCounts[rowIdx + 1]['High'],
-                    rowImpactCounts[rowIdx + 1]['Low'],
-                    rowImpactCounts[rowIdx + 1]['Normal']
+                    rowImpactCounts[rowIdx]['High'],
+                    rowImpactCounts[rowIdx]['Low'],
+                    rowImpactCounts[rowIdx]['Normal']
                 ];
                 pieChart.update();
             });
@@ -155,4 +155,3 @@
     </script>
 </body>
 </html>
-  
