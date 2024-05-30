@@ -167,7 +167,7 @@
                 var dataTable = dataTables['dataTable' + index];
 
                 var rows = [];
-                dataTable.rows().every(function() {
+                dataTable.rows({ search: 'applied' }).every(function() {
                     var row = $(this.node());
                     var impact = row.find('td').eq(0).text();
                     var item = row.find('td').eq(1).text();
