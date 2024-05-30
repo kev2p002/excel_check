@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file
 import pandas as pd
 import io
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 
 app = Flask(__name__)
 
@@ -45,14 +47,35 @@ def download_excel():
     df = pd.DataFrame(rows)
 
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name=key)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = key
+
+    # Adding headers
+    headers = ['Impact', 'Item', 'Interaction', 'Alerts']
+    sheet.append(headers)
+
+    # Adding data with 'Alerts' column
+    for _, row in df.iterrows():
+        alert_color = 'FFFFFF'  # Default white
+        if row['Impact'] == 'High':
+            alert_color = 'FF0000'  # Red
+        elif row['Impact'] == 'Low':
+            alert_color = 'FFFF00'  # Yellow
+        elif row['Impact'] == 'Normal':
+            alert_color = 'FFA500'  # Orange
+        sheet.append([row['Impact'], row['Item'], row['Interaction'], ''])
+        cell = sheet.cell(row=sheet.max_row, column=4)
+        cell.fill = PatternFill(start_color=alert_color, end_color=alert_color, fill_type="solid")
+
+    workbook.save(output)
     output.seek(0)
 
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'{key}.xlsx')
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,5 +253,3 @@ if __name__ == '__main__':
     </script>
 </body>
 </html>
-
-
