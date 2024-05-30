@@ -59,7 +59,7 @@
                                         <td>{{ row.Impact }}</td>
                                         <td>{{ row.Item }}</td>
                                         <td>
-                                            <select class="form-select interaction-dropdown" data-row="{{ loop.index }}" data-item="{{ row.Item }}" data-impact="{{ row.Impact }}">
+                                            <select class="form-select interaction-dropdown" data-row="{{ loop.index }}" data-item="{{ row.Item }}">
                                                 <option value="Select">Select</option>
                                                 <option value="Major">Major</option>
                                                 <option value="Minor">Minor</option>
@@ -70,6 +70,7 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                            <button class="btn btn-primary mt-3 download-btn" data-key="{{ key }}" data-index="{{ loop.index }}">Download Excel</button>
                         </div>
                         <div class="col-md-4">
                             <div class="chart-container">
@@ -85,8 +86,8 @@
 
     <script>
         $(document).ready(function() {
-            var pieCharts = [];
-            var rowImpactCounts = {};
+            var dataTables = {};
+            var pieCharts = {};
 
             {% for key, counts in pie_data.items() %}
             var ctx = document.getElementById('pieChart{{ loop.index }}').getContext('2d');
@@ -104,9 +105,7 @@
                     maintainAspectRatio: false
                 }
             });
-            pieCharts.push(pieChart);
-
-            rowImpactCounts['{{ loop.index }}'] = {'High': {{ counts['High'] }}, 'Low': {{ counts['Low'] }}, 'Normal': {{ counts['Normal'] }}};
+            pieCharts['pieChart{{ loop.index }}'] = pieChart;
 
             var dataTable = $('#dataTable{{ loop.index }}').DataTable({
                 "pageLength": 5,
@@ -114,7 +113,9 @@
                     adjustChartContainerHeight('{{ loop.index }}');
                 }
             });
+            dataTables['dataTable{{ loop.index }}'] = dataTable;
 
+            // Adjust chart container height based on DataTable
             function adjustChartContainerHeight(index) {
                 var tableHeight = $('#dataTable' + index + '_wrapper .dataTables_scrollBody').height();
                 $('#collapse' + index + ' .chart-container').css('height', tableHeight);
@@ -127,29 +128,76 @@
             // Add event listener for interaction dropdown
             $(document).on('change', '.interaction-dropdown', function() {
                 var row = $(this).closest('tr');
-                var impact = $(this).data('impact');
-                var rowIdx = $(this).data('row'); // zero-based index for pieCharts array
-                var pieChart = pieCharts[rowIdx - 1];
-                var dataset = pieChart.data.datasets[0];
-                var index = pieChart.data.labels.indexOf(impact);
+                var index = $(this).data('row');
+                var pieChart = pieCharts['pieChart' + index];
+                var dataTable = dataTables['dataTable' + index];
 
                 if ($(this).val() === 'No Interaction') {
                     row.addClass('strikeout');
-                    rowImpactCounts[rowIdx][impact]--;
                 } else {
-                    if (row.hasClass('strikeout')) {
-                        row.removeClass('strikeout');
-                        rowImpactCounts[rowIdx][impact]++;
-                    }
+                    row.removeClass('strikeout');
                 }
 
-                // Update the pie chart data
-                pieChart.data.datasets[0].data = [
-                    rowImpactCounts[rowIdx]['High'],
-                    rowImpactCounts[rowIdx]['Low'],
-                    rowImpactCounts[rowIdx]['Normal']
-                ];
+                // Update pie chart
+                updatePieChart(pieChart, dataTable);
+            });
+
+            function updatePieChart(pieChart, dataTable) {
+                var highCount = 0, lowCount = 0, normalCount = 0;
+
+                dataTable.rows().every(function() {
+                    var row = $(this.node());
+                    var interaction = row.find('select').val();
+                    if (interaction !== 'No Interaction') {
+                        var impact = row.find('td').eq(0).text();
+                        if (impact === 'High') highCount++;
+                        else if (impact === 'Low') lowCount++;
+                        else if (impact === 'Normal') normalCount++;
+                    }
+                });
+
+                pieChart.data.datasets[0].data = [highCount, lowCount, normalCount];
                 pieChart.update();
+            }
+
+            // Add event listener for download buttons
+            $(document).on('click', '.download-btn', function() {
+                var key = $(this).data('key');
+                var index = $(this).data('index');
+                var dataTable = dataTables['dataTable' + index];
+
+                var rows = [];
+                dataTable.rows().every(function() {
+                    var row = $(this.node());
+                    var impact = row.find('td').eq(0).text();
+                    var item = row.find('td').eq(1).text();
+                    var interaction = row.find('select').val();
+                    rows.push({ 'Impact': impact, 'Item': item, 'Interaction': interaction });
+                });
+
+                // Send data to Flask endpoint to generate Excel file
+                $.ajax({
+                    url: '/download_excel',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ key: key, rows: rows }),
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob) {
+                        var url = window.URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = key + '.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    },
+                    error: function() {
+                        alert('Error downloading file.');
+                    }
+                });
             });
         });
     </script>
