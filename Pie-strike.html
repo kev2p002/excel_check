@@ -145,7 +145,7 @@
             function updatePieChart(pieChart, dataTable) {
                 var highCount = 0, lowCount = 0, normalCount = 0;
 
-                dataTable.rows().every(function() {
+                dataTable.rows({ search: 'applied' }).every(function() {
                     var row = $(this.node());
                     var interaction = row.find('select').val();
                     if (interaction !== 'No Interaction') {
