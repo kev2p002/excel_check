@@ -1,76 +1,3 @@
-@app.route('/')
-def index():
-    data = {
-        "hello": {
-            "High": ["Item1", "Item2"],
-            "Low": ["Item3", "Item4", "Item5"],
-            "Normal": ["Item6", "Item7", "Item8"]
-        },
-        "man": {
-            "High": ["Item1", "Item2"],
-            "Low": ["Item3"],
-            "Normal": ["Item4", "Item5"]
-        }
-    }
-
-    dataframes = {}
-    pie_data = {}
-
-    for key, value in data.items():
-        rows = []
-        for impact, items in value.items():
-            for item in items:
-                rows.append({"Impact": impact, "Item": item, "ColorClass": impact.lower()})
-        df = pd.DataFrame(rows)
-        dataframes[key] = df
-        pie_data[key] = {
-            "High": len(value["High"]),
-            "Low": len(value["Low"]),
-            "Normal": len(value["Normal"])
-        }
-
-    return render_template('index.html', dataframes=dataframes, pie_data=pie_data)
-
-@app.route('/download_excel', methods=['POST'])
-def download_excel():
-    data = request.json
-    sheets_data = data['sheets']
-
-    output = io.BytesIO()
-    workbook = Workbook()
-    workbook.remove(workbook.active)  # Remove default sheet
-
-    for sheet_data in sheets_data:
-        key = sheet_data['key']
-        rows = sheet_data['rows']
-        df = pd.DataFrame(rows)
-        sheet = workbook.create_sheet(title=key)
-
-        # Adding headers
-        headers = ['Impact', 'Item', 'Interaction', 'Alerts']
-        sheet.append(headers)
-
-        # Adding data with 'Alerts' column
-        for _, row in df.iterrows():
-            alert_color = 'FFFFFF'  # Default white
-            if row['Impact'] == 'High':
-                alert_color = 'FF0000'  # Red
-            elif row['Impact'] == 'Low':
-                alert_color = 'FFFF00'  # Yellow
-            elif row['Impact'] == 'Normal':
-                alert_color = 'FFA500'  # Orange
-            sheet.append([row['Impact'], row['Item'], row['Interaction'], ''])
-            cell = sheet.cell(row=sheet.max_row, column=4)
-            cell.fill = PatternFill(start_color=alert_color, end_color=alert_color, fill_type="solid")
-
-    workbook.save(output)
-    output.seek(0)
-
-    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='all_data.xlsx')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,7 +81,10 @@ if __name__ == '__main__':
             </div>
         </div>
         {% endfor %}
-        <button class="btn btn-primary mt-3" id="downloadAllBtn">Download All Data</button>
+        <div class="mt-3">
+            <input type="text" class="form-control d-inline" id="titleInput" placeholder="Enter title" style="width: 300px; margin-right: 10px;">
+            <button class="btn btn-primary d-inline" id="downloadAllBtn">Download All Data</button>
+        </div>
     </div>
 
     <script>
@@ -207,6 +137,7 @@ if __name__ == '__main__':
 
             // Add event listener for the download all button
             $('#downloadAllBtn').on('click', function() {
+                var title = $('#titleInput').val();
                 var sheets = [];
                 {% for key in dataframes.keys() %}
                 var dataTable = dataTables['dataTable{{ loop.index }}'];
@@ -226,7 +157,7 @@ if __name__ == '__main__':
                     url: '/download_excel',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ sheets: sheets }),
+                    data: JSON.stringify({ title: title, sheets: sheets }),
                     xhrFields: {
                         responseType: 'blob'
                     },
@@ -250,3 +181,45 @@ if __name__ == '__main__':
 </body>
 </html>
 
+
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
+    data = request.json
+    title = data.get('title', 'Data')
+    sheets_data = data['sheets']
+
+    output = io.BytesIO()
+    workbook = Workbook()
+    workbook.remove(workbook.active)  # Remove default sheet
+
+    for sheet_data in sheets_data:
+        key = sheet_data['key']
+        rows = sheet_data['rows']
+        df = pd.DataFrame(rows)
+        sheet = workbook.create_sheet(title=key)
+
+        # Adding title as the first row
+        sheet.append([title])
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+
+        # Adding headers
+        headers = ['Impact', 'Item', 'Interaction', 'Alerts']
+        sheet.append(headers)
+
+        # Adding data with 'Alerts' column
+        for _, row in df.iterrows():
+            alert_color = 'FFFFFF'  # Default white
+            if row['Impact'] == 'High':
+                alert_color = 'FF0000'  # Red
+            elif row['Impact'] == 'Low':
+                alert_color = 'FFFF00'  # Yellow
+            elif row['Impact'] == 'Normal':
+                alert_color = 'FFA500'  # Orange
+            sheet.append([row['Impact'], row['Item'], row['Interaction'], ''])
+            cell = sheet.cell(row=sheet.max_row, column=4)
+            cell.fill = PatternFill(start_color=alert_color, end_color=alert_color, fill_type="solid")
+
+    workbook.save(output)
+    output.seek(0)
+
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='all_data.xlsx')
