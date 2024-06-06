@@ -1,3 +1,51 @@
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
+    data = request.json
+    title = data.get('title', 'Data')
+    sheets_data = data['sheets']
+
+    output = io.BytesIO()
+    workbook = Workbook()
+    workbook.remove(workbook.active)  # Remove default sheet
+
+    for sheet_data in sheets_data:
+        key = sheet_data['key']
+        rows = sheet_data['rows']
+        df = pd.DataFrame(rows)
+        sheet = workbook.create_sheet(title=key)
+
+        # Adding title as the first row
+        title_cell = sheet.cell(row=1, column=1, value=title)
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+        
+        # Centering the title
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Adding headers
+        headers = ['Impact', 'Item', 'Interaction', 'Alerts']
+        sheet.append(headers)
+
+        # Adding data with 'Alerts' column
+        for _, row in df.iterrows():
+            alert_color = 'FFFFFF'  # Default white
+            if row['Impact'] == 'High':
+                alert_color = 'FF0000'  # Red
+            elif row['Impact'] == 'Low':
+                alert_color = 'FFFF00'  # Yellow
+            elif row['Impact'] == 'Normal':
+                alert_color = 'FFA500'  # Orange
+            sheet.append([row['Impact'], row['Item'], row['Interaction'], ''])
+            cell = sheet.cell(row=sheet.max_row, column=4)
+            cell.fill = PatternFill(start_color=alert_color, end_color=alert_color, fill_type="solid")
+
+    workbook.save(output)
+    output.seek(0)
+
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='all_data.xlsx')
+    
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
