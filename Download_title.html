@@ -1,0 +1,96 @@
+<script>
+    $(document).ready(function() {
+        var dataTables = {};
+        {% for key, counts in pie_data.items() %}
+        var ctx = document.getElementById('pieChart{{ loop.index }}').getContext('2d');
+        var pieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['High', 'Low', 'Normal'],
+                datasets: [{
+                    data: [{{ counts['High'] }}, {{ counts['Low'] }}, {{ counts['Normal'] }}],
+                    backgroundColor: ['red', 'yellow', 'orange']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        var dataTable = $('#dataTable{{ loop.index }}').DataTable({
+            "pageLength": 5,
+            "drawCallback": function(settings) {
+                adjustChartContainerHeight('{{ loop.index }}');
+            }
+        });
+        dataTables['dataTable{{ loop.index }}'] = dataTable;
+
+        // Adjust chart container height based on DataTable
+        function adjustChartContainerHeight(index) {
+            var tableHeight = $('#dataTable' + index + '_wrapper .dataTables_scrollBody').height();
+            $('#collapse' + index + ' .chart-container').css('height', tableHeight);
+        }
+
+        adjustChartContainerHeight('{{ loop.index }}');
+
+        {% endfor %}
+
+        // Add event listener for interaction dropdown
+        $(document).on('change', '.interaction-dropdown', function() {
+            var row = $(this).closest('tr');
+            if ($(this).val() === 'No Interaction') {
+                row.addClass('strikeout');
+            } else {
+                row.removeClass('strikeout');
+            }
+        });
+
+        // Add event listener for the download all button
+        $('#downloadAllBtn').on('click', function() {
+            var title = $('#titleInput').val().trim();
+            if (!title) {
+                alert('Please enter a title.');
+                return;
+            }
+
+            var sheets = [];
+            {% for key in dataframes.keys() %}
+            var dataTable = dataTables['dataTable{{ loop.index }}'];
+            var rows = [];
+            dataTable.rows().every(function() {
+                var row = $(this.node());
+                var impact = row.find('td').eq(0).text();
+                var item = row.find('td').eq(1).text();
+                var interaction = row.find('select').val();
+                rows.push({ 'Impact': impact, 'Item': item, 'Interaction': interaction });
+            });
+            sheets.push({ key: '{{ key }}', rows: rows });
+            {% endfor %}
+
+            // Send data to Flask endpoint to generate Excel file
+            $.ajax({
+                url: '/download_excel',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ title: title, sheets: sheets }),
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob) {
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'all_data.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                },
+                error: function() {
+                    alert('Error downloading file.');
+                }
+            });
+        });
+    });
+</script>
