@@ -41,6 +41,7 @@
             var row = $(this).closest('tr');
             if ($(this).val() === 'No Interaction') {
                 row.addClass('strikeout');
+                row.find('.rationale-input').removeClass('strikeout');
             } else {
                 row.removeClass('strikeout');
             }
@@ -97,8 +98,6 @@
 </script>
 
 
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,13 +125,20 @@
         .dataTables_wrapper .dataTables_paginate {
             margin-top: 15px; /* space between table and pagination */
         }
-        .strikeout {
+        .strikeout td {
             text-decoration: line-through;
+        }
+        .strikeout input.rationale-input {
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
     <div class="container mt-5">
+        <div class="form-group">
+            <label for="titleInput">Title</label>
+            <input type="text" class="form-control" id="titleInput" placeholder="Enter title">
+        </div>
         {% for key, df in dataframes.items() %}
         <div class="card mb-3">
             <div class="card-header">
@@ -169,7 +175,7 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control rationale-input" style="background-color: black; color: white;">
+                                            <input type="text" class="form-control rationale-input" value="Default rationale">
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -186,63 +192,8 @@
             </div>
         </div>
         {% endfor %}
-        <div class="mt-3">
-            <input type="text" class="form-control d-inline" id="titleInput" placeholder="Enter title" style="width: 300px; margin-right: 10px;">
-            <button class="btn btn-primary d-inline" id="downloadAllBtn">Download All Data</button>
-        </div>
+        <button class="btn btn-primary mt-3" id="downloadAllBtn">Download All Data</button>
     </div>
 </body>
 </html>
 
-
-
-@app.route('/download_excel', methods=['POST'])
-def download_excel():
-    data = request.json
-    title = data.get('title', 'Data')
-    sheets_data = data['sheets']
-
-    output = io.BytesIO()
-    workbook = Workbook()
-    workbook.remove(workbook.active)  # Remove default sheet
-
-    for sheet_data in sheets_data:
-        key = sheet_data['key']
-        rows = sheet_data['rows']
-        df = pd.DataFrame(rows)
-        sheet = workbook.create_sheet(title=key)
-
-        # Adding title as the first row
-        title_cell = sheet.cell(row=1, column=1, value=title)
-        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
-        
-        # Centering the title
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        # Adding headers
-        headers = ['Impact', 'Item', 'Interaction', 'Rationale', 'Alerts']
-        sheet.append(headers)
-
-        # Adding data with 'Alerts' column
-        for _, row in df.iterrows():
-            alert_color = 'FFFFFF'  # Default white
-            if row['Impact'] == 'High':
-                alert_color = 'FF0000'  # Red
-            elif row['Impact'] == 'Low':
-                alert_color = 'FFFF00'  # Yellow
-            elif row['Impact'] == 'Normal':
-                alert_color = 'FFA500'  # Orange
-
-            alert_cell = PatternFill(start_color=alert_color, end_color=alert_color, fill_type="solid")
-            new_row = [row['Impact'], row['Item'], row['Interaction'], row['Rationale'], '']
-            sheet.append(new_row)
-
-            # Set alert color for the last cell
-            for cell in sheet[-1]:
-                if cell.value == '':
-                    cell.fill = alert_cell
-
-    workbook.save(output)
-    output.seek(0)
-
-    return send_file(output, attachment_filename="all_data.xlsx", as_attachment=True)
