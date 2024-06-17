@@ -10,21 +10,21 @@ app = Flask(__name__)
 def index():
     data = {
         "hello": {
-            "High": ["Item1", "Item2"],
+            "Highman": ["Item1", "Item2"],
             "Low": ["Item3", "Item4", "Item5"],
             "Normal": ["Item6", "Item7", "Item8"]
         },
         "man": {
-            "High": ["Item1", "Item2"],
+            "Highman": ["Item1", "Item2"],
             "Low": ["Item3"],
             "Normal": ["Item4", "Item5"]
         }
     }
 
     impact_colors = {
-        "High": "#FF0000",   # Red
-        "Low": "#FFFF00",    # Yellow
-        "Normal": "#FFA500"  # Orange
+        "Highman": "#FF0000",
+        "Low": "#FFFF00",
+        "Normal": "#FFA500"
     }
 
     dataframes = {}
@@ -37,9 +37,14 @@ def index():
                 rows.append({"Impact": impact, "Item": item, "ColorClass": impact.lower()})
         df = pd.DataFrame(rows)
         dataframes[key] = df
-        pie_data[key] = {impact: len(items) for impact, items in value.items()}
+        pie_data[key] = {
+            "Highman": len(value["Highman"]),
+            "Low": len(value["Low"]),
+            "Normal": len(value["Normal"])
+        }
 
     return render_template('new_index.html', dataframes=dataframes, pie_data=pie_data, impact_colors=impact_colors)
+
 
 @app.route('/download_excel', methods=['POST'])
 def download_excel():
@@ -84,6 +89,7 @@ def download_excel():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -140,7 +146,7 @@ if __name__ == '__main__':
                                 <tbody>
                                     {% for row in df.itertuples() %}
                                     <tr>
-                                        <td style="color: {{ impact_colors[row.Impact] }};">{{ row.Impact }}</td>
+                                        <td>{{ row.Impact }}</td>
                                         <td>{{ row.Item }}</td>
                                         <td>
                                             <select class="form-select interaction-dropdown" data-row="{{ loop.index }}" data-item="{{ row.Item }}">
@@ -171,14 +177,17 @@ if __name__ == '__main__':
     <script>
         $(document).ready(function() {
             var dataTables = {};
+            var impactColors = {{ impact_colors|tojson|safe }};
+            var pieData = {{ pie_data|tojson|safe }};
 
-            {% for key, counts in pie_data.items() %}
-            var impactColors = {{ impact_colors|tojson }};
-            var labels = Object.keys(impactColors);
-            var backgroundColors = Object.values(impactColors);
-            var data = labels.map(label => {{ pie_data[key]|tojson }}[label] || 0);
-
+            {% for key in dataframes.keys() %}
             var ctx = document.getElementById('pieChart{{ loop.index }}').getContext('2d');
+            var labels = Object.keys(pieData['{{ key }}']);
+            var data = Object.values(pieData['{{ key }}']);
+            var backgroundColors = labels.map(function(label) {
+                return impactColors[label];
+            });
+
             var pieChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
@@ -269,7 +278,11 @@ if __name__ == '__main__':
                 $('#dataTable' + index + ' tbody tr').each(function() {
                     var impactCell = $(this).find('td').eq(0);
                     var impactText = impactCell.text();
-                    impactCell.css('color', impactColors[impactText]);
+                    var color = impactColors[impactText];
+                    console.log('Impact:', impactText, 'Color:', color); // Log the impact and color to the console
+                    if (color) {
+                        impactCell.css('color', color);
+                    }
                 });
             }
         });
