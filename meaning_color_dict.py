@@ -289,3 +289,75 @@ if __name__ == '__main__':
     </script>
 </body>
 </html>
+
+
+newwww
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
+    data = request.json
+    sheets_data = data['sheets']
+
+    # Prepare data for the summary sheet
+    summary_data = {
+        "High": {"count": 0, "features": []},
+        "Low": {"count": 0, "features": []},
+        "Normal": {"count": 0, "features": []}
+    }
+
+    for sheet_data in sheets_data:
+        key = sheet_data['key']
+        rows = sheet_data['rows']
+        for row in rows:
+            if row['Impact'] in summary_data:
+                summary_data[row['Impact']]['count'] += 1
+                if key not in summary_data[row['Impact']]['features']:
+                    summary_data[row['Impact']]['features'].append(key)
+
+    output = io.BytesIO()
+    workbook = Workbook()
+    workbook.remove(workbook.active)  # Remove default sheet
+
+    # Create summary sheet
+    summary_sheet = workbook.create_sheet(title="Summary", index=0)
+    summary_sheet.append(["Impact Summary"])  # Title row
+    summary_sheet.merge_cells("A1:C1")  # Merge the title cell across three columns
+
+    headers = ["Impact", "Count", "Features"]
+    summary_sheet.append(headers)  # Headers row
+
+    for impact, data in summary_data.items():
+        features_str = ", ".join(data["features"])
+        summary_sheet.append([impact, data["count"], features_str])
+
+    # Create individual sheets
+    for sheet_data in sheets_data:
+        key = sheet_data['key']
+        rows = sheet_data['rows']
+        df = pd.DataFrame(rows)
+        sheet = workbook.create_sheet(title=key)
+
+        # Adding headers
+        headers = ['Impact', 'Item', 'Interaction', 'Alerts']
+        sheet.append(headers)
+
+        # Adding data with 'Alerts' column
+        for _, row in df.iterrows():
+            alert_color = 'FFFFFF'  # Default white
+            if row['Impact'] == 'High':
+                alert_color = 'FF0000'  # Red
+            elif row['Impact'] == 'Low':
+                alert_color = 'FFFF00'  # Yellow
+            elif row['Impact'] == 'Normal':
+                alert_color = 'FFA500'  # Orange
+            
+            # Writing data to the sheet
+            sheet.append([row['Impact'], row['Item'], row['Interaction'], ''])
+            # Formatting font color based on impact
+            cell = sheet.cell(row=sheet.max_row, column=1)
+            cell.font = Font(color=alert_color)
+
+    workbook.save(output)
+    output.seek(0)
+
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='all_data.xlsx')
+    
